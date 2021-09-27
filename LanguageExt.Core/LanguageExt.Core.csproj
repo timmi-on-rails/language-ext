@@ -5,6 +5,7 @@
   <PropertyGroup Label="Configuration">
     <NoWarn>1701;1702;1705;IDE1006;CS1591;CS1573;CS1712;CS1570;CS1711;CS1572;CS1587</NoWarn>
     <DefineConstants>CONTRACTS_FULL</DefineConstants>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(TargetFramework)' == 'net461'">
     <DefineConstants>NETFX</DefineConstants>
@@ -16,7 +17,7 @@
     <DefineConstants>NETSTANDARD21</DefineConstants>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageVersion>3.5.58-beta</PackageVersion>
+    <PackageVersion>3.5.59-beta</PackageVersion>
     <PackageId>LanguageExt.Core</PackageId>
     <Title>LanguageExt.Core</Title>
     <Authors>Paul Louth</Authors>
