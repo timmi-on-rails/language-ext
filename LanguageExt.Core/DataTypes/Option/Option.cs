@@ -42,7 +42,16 @@ namespace LanguageExt
         IComparable,
         ISerializable
     {
-        internal readonly A Value;
+        [Pure]
+        internal A Value
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => value == null
+                       ? throw new ValueIsNullException()
+                       : value;
+        }
+
+        internal readonly A? value;
         internal readonly bool isSome;
 
         /// <summary>
@@ -68,35 +77,50 @@ namespace LanguageExt
         /// </summary>
         internal Option(A value, bool isSome)
         {
-            Value = value;
+            this.value  = value;
             this.isSome = isSome;
         }
+
+        /// <summary>
+        /// Deconstruction for use in pattern-matching
+        /// </summary>
+        /// <remarks>
+        ///
+        ///     Some = result is A
+        ///     None = result is null
+        ///
+        /// </remarks>
+        public void Deconstruct(out A? value) =>
+            value = IsSome ? Value : default;
+        
+        [Pure]
+        [Obsolete("Case is deprecated, use deconstruction")]
+        public A? Case =>
+            IsSome ? Value : default;
 
         /// <summary>
         /// Ctor that facilitates serialisation
         /// </summary>
         /// <param name="option">None or Some A.</param>
-        [Pure]
         public Option(IEnumerable<A> option)
         {
             var first = option.Take(1).ToArray();
             isSome = first.Length == 1;
-            Value = isSome
-                ? first[0]
-                : default;
+            this.value = isSome
+                             ? first[0]
+                             : default;
         }
 
-        [Pure]
         Option(SerializationInfo info, StreamingContext context)
         {
             isSome = (bool)info.GetValue("IsSome", typeof(bool));
             if(isSome)
             {
-                Value = (A)info.GetValue("Value", typeof(A));
+                value = (A)info.GetValue("Value", typeof(A));
             }
             else
             {
-                Value = default;
+                value = default;
             }
         }
 
@@ -105,21 +129,6 @@ namespace LanguageExt
             info.AddValue("IsSome", IsSome);
             if(IsSome) info.AddValue("Value", Value);
         }
-
-        /// <summary>
-        /// Reference version of option for use in pattern-matching
-        /// </summary>
-        /// <remarks>
-        ///
-        ///     Some = result is A
-        ///     None = result is null
-        ///
-        /// </remarks>
-        [Pure]
-        public object Case =>
-            IsSome
-                ? (object)Value
-                : null;
 
         /// <summary>
         /// Uses the `EqDefault` instance to do an equality check on the bound value.  
@@ -339,7 +348,7 @@ namespace LanguageExt
         /// </summary>
         [Pure]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public override bool Equals(object obj) =>
+        public override bool Equals(object? obj) =>
             obj is Option<A> opt && Equals(opt);
 
         /// <summary>
@@ -351,11 +360,11 @@ namespace LanguageExt
         [Pure]
         public override int GetHashCode() =>
             isSome 
-                ? Value.GetHashCode() 
+                ? Value?.GetHashCode() ?? 0 
                 : 0;
         
         [Pure]
-        public int CompareTo(object obj) =>
+        public int CompareTo(object? obj) =>
             obj is Option<A> t ? CompareTo(t) : 1;
 
         /// <summary>
@@ -366,7 +375,7 @@ namespace LanguageExt
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public override string ToString() =>
             isSome
-                ? $"Some({Value.ToString()})"
+                ? $"Some({Value?.ToString() ?? ""})"
                 : "None";
 
         /// <summary>
@@ -1048,9 +1057,7 @@ namespace LanguageExt
         [Pure]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool ForAll(Func<A, bool> pred) =>
-            isSome
-                ? pred(Value)
-                : true;
+            !isSome || pred(Value);
 
         /// <summary>
         /// Apply a predicate to the bound value.  If the Option is in a None state
@@ -1103,9 +1110,7 @@ namespace LanguageExt
         [Pure]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Exists(Func<A, bool> pred) =>
-            isSome
-                ? pred(Value)
-                : false;
+            isSome && pred(Value);
 
         /// <summary>
         /// Apply a predicate to the bound value.  If the Option is in a None state
@@ -1147,7 +1152,6 @@ namespace LanguageExt
         /// Invoke an action for the bound value (if in a Some state)
         /// </summary>
         /// <param name="Some">Action to invoke</param>
-        [Pure]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Unit Iter(Action<A> Some)
         {

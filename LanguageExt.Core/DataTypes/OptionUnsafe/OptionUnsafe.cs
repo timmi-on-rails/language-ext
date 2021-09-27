@@ -33,13 +33,13 @@ namespace LanguageExt
     /// </summary>
     /// <typeparam name="A">Bound value</typeparam>
     public readonly struct OptionUnsafe<A> :
-        IEnumerable<A>,
+        IEnumerable<A?>,
         IOptional,
         IEquatable<OptionUnsafe<A>>,
         IComparable<OptionUnsafe<A>>,
         IComparable
     {
-        internal readonly A Value;
+        internal readonly A? Value;
         internal readonly bool isSome;
 
         /// <summary>
@@ -54,13 +54,13 @@ namespace LanguageExt
         /// <param name="value">Value to bind, must be non-null</param>
         /// <returns>OptionUnsafe of A</returns>
         [Pure]
-        public static OptionUnsafe<A> Some(A value) =>
+        public static OptionUnsafe<A> Some(A? value) =>
             new OptionUnsafe<A>(value, true);
 
         /// <summary>
         /// Constructor
         /// </summary>
-        internal OptionUnsafe(A value, bool isSome)
+        internal OptionUnsafe(A? value, bool isSome)
         {
             Value = value;
             this.isSome = isSome;
@@ -70,8 +70,7 @@ namespace LanguageExt
         /// Ctor that facilitates serialisation
         /// </summary>
         /// <param name="option">None or Some A.</param>
-        [Pure]
-        public OptionUnsafe(IEnumerable<A> option)
+        public OptionUnsafe(IEnumerable<A?> option)
         {
             var first = option.Take(1).ToArray();
             isSome = first.Length == 1;
@@ -80,7 +79,6 @@ namespace LanguageExt
                 : default;
         }
 
-        [Pure]
         OptionUnsafe(SerializationInfo info, StreamingContext context)
         {
             isSome = (bool)info.GetValue("IsSome", typeof(bool));
@@ -101,23 +99,25 @@ namespace LanguageExt
         }
 
         /// <summary>
-        /// Reference version of option for use in pattern-matching
+        /// Deconstruction for use in pattern-matching
         /// </summary>
         /// <remarks>
         ///
-        ///     Some = result is A
-        ///     None = result is null
+        ///     Some = result is (A | null, true)
+        ///     None = result is (null, false)
         ///
         /// </remarks>
+        public void Deconstruct(out A? value, out bool isSome) =>
+            (value, isSome) = IsSome ? (Value, true) : (default, false);
+
         [Pure]
-        public object Case =>
-            IsSome
-                ? (object)Value
-                : null;
+        [Obsolete("Case is deprecated, use deconstruction")]
+        public A? Case =>
+            IsSome ? Value : default;
 
         [Pure]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IEnumerator<A> GetEnumerator() =>
+        public IEnumerator<A?> GetEnumerator() =>
             AsEnumerable().GetEnumerator();
 
         [Pure]
@@ -154,7 +154,8 @@ namespace LanguageExt
             var yIsSome = other.IsSome;
             var xIsNone = !isSome;
             var yIsNone = !yIsSome;
-            return (xIsNone && yIsNone) || (isSome && yIsSome && default(EqA).Equals(Value, other.Value));
+            return (xIsNone && yIsNone) || 
+                   (isSome && yIsSome && default(EqA).Equals(Value, other.Value));
         }
 
         /// <summary>
@@ -194,7 +195,7 @@ namespace LanguageExt
         /// <param name="a">Unit value</param>
         [Pure]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator OptionUnsafe<A>(A a) =>
+        public static implicit operator OptionUnsafe<A>(A? a) =>
             OptionUnsafe<A>.Some(a);
 
         /// Implicit conversion operator from None to OptionUnsafe<A>
@@ -211,7 +212,7 @@ namespace LanguageExt
         /// <param name="a">None value</param>
         [Pure]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static explicit operator A(OptionUnsafe<A> ma) =>
+        public static explicit operator A?(OptionUnsafe<A> ma) =>
             ma.isSome
                 ? ma.Value
                 : throw new InvalidCastException("OptionNone is not in a Some state");
@@ -342,7 +343,7 @@ namespace LanguageExt
         /// </summary>
         [Pure]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public override bool Equals(object obj) =>
+        public override bool Equals(object? obj) =>
             obj is OptionUnsafe<A> opt && Equals(opt);
 
         /// <summary>
@@ -358,7 +359,7 @@ namespace LanguageExt
                 : 0;
         
         [Pure]
-        public int CompareTo(object obj) =>
+        public int CompareTo(object? obj) =>
             obj is OptionUnsafe<A> t ? CompareTo(t) : 1;
 
         /// <summary>
@@ -404,7 +405,7 @@ namespace LanguageExt
         /// <param name="f">Projection function</param>
         /// <returns>Mapped functor</returns>
         [Pure]
-        public OptionUnsafe<B> Select<B>(Func<A, B> f) =>
+        public OptionUnsafe<B> Select<B>(Func<A?, B?> f) =>
             isSome
                 ? OptionUnsafe<B>.Some(f(Value))
                 : default;
@@ -416,7 +417,7 @@ namespace LanguageExt
         /// <param name="f">Projection function</param>
         /// <returns>Mapped functor</returns>
         [Pure]
-        public OptionUnsafe<B> Map<B>(Func<A, B> f) =>
+        public OptionUnsafe<B> Map<B>(Func<A?, B?> f) =>
             isSome
                 ? OptionUnsafe<B>.Some(f(Value))
                 : default;
@@ -425,7 +426,7 @@ namespace LanguageExt
         /// Monad bind operation
         /// </summary>
         [Pure]
-        public OptionUnsafe<B> Bind<B>(Func<A, OptionUnsafe<B>> f) =>
+        public OptionUnsafe<B> Bind<B>(Func<A?, OptionUnsafe<B>> f) =>
             isSome
                 ? f(Value)
                 : default;
@@ -434,7 +435,7 @@ namespace LanguageExt
         /// Bi-bind.  Allows mapping of both monad states
         /// </summary>
         [Pure]
-        public OptionUnsafe<B> BiBind<B>(Func<A, OptionUnsafe<B>> Some, Func<OptionUnsafe<B>> None) =>
+        public OptionUnsafe<B> BiBind<B>(Func<A?, OptionUnsafe<B>> Some, Func<OptionUnsafe<B>> None) =>
             isSome
                 ? Some(Value)
                 : None();
@@ -444,8 +445,8 @@ namespace LanguageExt
         /// </summary>
         [Pure]
         public OptionUnsafe<C> SelectMany<B, C>(
-            Func<A, OptionUnsafe<B>> bind,
-            Func<A, B, C> project)
+            Func<A?, OptionUnsafe<B>> bind,
+            Func<A?, B?, C?> project)
         {
             if (IsNone) return default;
             var mb = bind(Value);
@@ -462,8 +463,10 @@ namespace LanguageExt
         /// <param name="None">Operation to perform if the option is in a None state</param>
         /// <returns>The result of the match operation</returns>
         [Pure]
-        public R MatchUntyped<R>(Func<object, R> Some, Func<R> None) =>
-            matchUntypedUnsafe<MOptionUnsafe<A>, OptionUnsafe<A>, A, R>(this, Some, None);
+        public R? MatchUntyped<R>(Func<object, R> Some, Func<R> None) =>
+            IsSome
+                ? Some(Value ?? throw new ValueIsNullException())
+                : None();
 
         /// <summary>
         /// Match operation with an untyped value for Some. This can be
@@ -474,7 +477,7 @@ namespace LanguageExt
         /// <param name="None">Operation to perform if the option is in a None state</param>
         /// <returns>The result of the match operation</returns>
         [Pure]
-        public R MatchUntypedUnsafe<R>(Func<object, R> Some, Func<R> None) =>
+        public R? MatchUntypedUnsafe<R>(Func<object?, R?> Some, Func<R?> None) =>
             matchUntypedUnsafe<MOptionUnsafe<A>, OptionUnsafe<A>, A, R>(this, Some, None);
 
         /// <summary>
@@ -492,7 +495,7 @@ namespace LanguageExt
         /// <returns>An enumerable of zero or one items</returns>
         [Pure]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Arr<A> ToArray() =>
+        public Arr<A?> ToArray() =>
             isSome
                 ? Arr.create(Value)
                 : Empty;
@@ -503,7 +506,7 @@ namespace LanguageExt
         /// <returns>An immutable list of zero or one items</returns>
         [Pure]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Lst<A> ToList() =>
+        public Lst<A?> ToList() =>
             isSome
                 ? List.create(Value)
                 : Empty;
@@ -514,7 +517,7 @@ namespace LanguageExt
         /// <returns>An enumerable sequence of zero or one items</returns>
         [Pure]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Seq<A> ToSeq() =>
+        public Seq<A?> ToSeq() =>
             isSome
                 ? Seq1(Value)
                 : Empty;
@@ -525,7 +528,7 @@ namespace LanguageExt
         /// <returns>An enumerable of zero or one items</returns>
         [Pure]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IEnumerable<A> AsEnumerable() =>
+        public IEnumerable<A?> AsEnumerable() =>
             ToSeq();
         
         /// <summary>
@@ -610,7 +613,7 @@ namespace LanguageExt
         /// </summary>
         /// <param name="f">The Some(x) match operation</param>
         [Pure]
-        public SomeUnsafeUnitContext<MOptionUnsafe<A>, OptionUnsafe<A>, A> Some(Action<A> f) =>
+        public SomeUnsafeUnitContext<MOptionUnsafe<A>, OptionUnsafe<A>, A> Some(Action<A?> f) =>
             new SomeUnsafeUnitContext<MOptionUnsafe<A>, OptionUnsafe<A>, A>(this, f);
 
         /// <summary>
@@ -623,7 +626,7 @@ namespace LanguageExt
         /// <param name="f">The Some(x) match operation</param>
         /// <returns>The result of the match operation</returns>
         [Pure]
-        public SomeUnsafeContext<MOptionUnsafe<A>, OptionUnsafe<A>, A, B> Some<B>(Func<A, B> f) =>
+        public SomeUnsafeContext<MOptionUnsafe<A>, OptionUnsafe<A>, A, B> Some<B>(Func<A?, B?> f) =>
             new SomeUnsafeContext<MOptionUnsafe<A>, OptionUnsafe<A>, A, B>(this, f);
 
         /// <summary>
@@ -634,7 +637,7 @@ namespace LanguageExt
         /// <param name="None">None match operation. May return null.</param>
         /// <returns>B, or null</returns>
         [Pure]
-        public B MatchUnsafe<B>(Func<A, B> Some, Func<B> None) =>
+        public B? MatchUnsafe<B>(Func<A?, B?> Some, Func<B?> None) =>
             isSome
                 ? Some(Value)
                 : None();
@@ -647,7 +650,7 @@ namespace LanguageExt
         /// <param name="None">None match operation. May return null.</param>
         /// <returns>B, or null</returns>
         [Pure]
-        public B MatchUnsafe<B>(Func<A, B> Some, B None) =>
+        public B? MatchUnsafe<B>(Func<A?, B?> Some, B? None) =>
             isSome
                 ? Some(Value)
                 : None;
@@ -657,7 +660,7 @@ namespace LanguageExt
         /// </summary>
         /// <param name="Some">Some match operation</param>
         /// <param name="None">None match operation</param>
-        public Unit MatchUnsafe(Action<A> Some, Action None)
+        public Unit MatchUnsafe(Action<A?> Some, Action None)
         {
             if (isSome)
             {
@@ -674,7 +677,7 @@ namespace LanguageExt
         /// Invokes the action if OptionUnsafe is in the Some state, otherwise nothing happens.
         /// </summary>
         /// <param name="f">Action to invoke if OptionUnsafe is in the Some state</param>
-        public Unit IfSomeUnsafe(Action<A> f)
+        public Unit IfSomeUnsafe(Action<A?> f)
         {
             if (isSome)
             {
@@ -688,7 +691,7 @@ namespace LanguageExt
         /// happens.
         /// </summary>
         /// <param name="f">Function to invoke if OptionUnsafe is in the Some state</param>
-        public Unit IfSomeUnsafe(Func<A, Unit> f)
+        public Unit IfSomeUnsafe(Func<A?, Unit> f)
         {
             if (isSome)
             {
@@ -706,7 +709,7 @@ namespace LanguageExt
         /// <returns>Tesult of invoking the None() operation if the optional 
         /// is in a None state, otherwise the bound Some(x) value is returned.</returns>
         [Pure]
-        public A IfNoneUnsafe(Func<A> None) =>
+        public A? IfNoneUnsafe(Func<A?> None) =>
             isSome
                 ? Value
                 : None();
@@ -720,7 +723,7 @@ namespace LanguageExt
         /// <returns>noneValue if the optional is in a None state, otherwise
         /// the bound Some(x) value is returned</returns>
         [Pure]
-        public A IfNoneUnsafe(A noneValue) =>
+        public A? IfNoneUnsafe(A? noneValue) =>
             isSome
                 ? Value
                 : noneValue;
@@ -745,7 +748,7 @@ namespace LanguageExt
         /// <param name="folder">Folder function, applied if OptionUnsafe is in a Some state</param>
         /// <returns>The aggregate state</returns>
         [Pure]
-        public S Fold<S>(S state, Func<S, A, S> folder) =>
+        public S Fold<S>(S state, Func<S, A?, S> folder) =>
             isSome
                 ? folder(state, Value)
                 : state;
@@ -770,7 +773,7 @@ namespace LanguageExt
         /// <param name="folder">Folder function, applied if OptionUnsafe is in a Some state</param>
         /// <returns>The aggregate state</returns>
         [Pure]
-        public S FoldBack<S>(S state, Func<S, A, S> folder) =>
+        public S FoldBack<S>(S state, Func<S, A?, S> folder) =>
             isSome
                 ? folder(state, Value)
                 : state;
@@ -796,7 +799,7 @@ namespace LanguageExt
         /// <param name="None">Folder function, applied if OptionUnsafe is in a None state</param>
         /// <returns>The aggregate state</returns>
         [Pure]
-        public S BiFold<S>(S state, Func<S, A, S> Some, Func<S, Unit, S> None) =>
+        public S BiFold<S>(S state, Func<S, A?, S> Some, Func<S, Unit, S> None) =>
             isSome
                 ? Some(state, Value)
                 : None(state, unit);
@@ -822,7 +825,7 @@ namespace LanguageExt
         /// <param name="None">Folder function, applied if OptionUnsafe is in a None state</param>
         /// <returns>The aggregate state</returns>
         [Pure]
-        public S BiFold<S>(S state, Func<S, A, S> Some, Func<S, S> None) =>
+        public S BiFold<S>(S state, Func<S, A?, S> Some, Func<S, S> None) =>
             isSome
                 ? Some(state, Value)
                 : None(state);
@@ -835,7 +838,7 @@ namespace LanguageExt
         /// <param name="None">Projection function</param>
         /// <returns>Mapped functor</returns>
         [Pure]
-        public OptionUnsafe<B> BiMap<B>(Func<A, B> Some, Func<Unit, B> None) =>
+        public OptionUnsafe<B> BiMap<B>(Func<A?, B?> Some, Func<Unit, B?> None) =>
             isSome
                 ? Some(Value)
                 : None(unit);
@@ -848,7 +851,7 @@ namespace LanguageExt
         /// <param name="None">Projection function</param>
         /// <returns>Mapped functor</returns>
         [Pure]
-        public OptionUnsafe<B> BiMap<B>(Func<A, B> Some, Func<B> None) =>
+        public OptionUnsafe<B> BiMap<B>(Func<A?, B?> Some, Func<B?> None) =>
             isSome
                 ? Some(Value)
                 : None();
@@ -881,10 +884,8 @@ namespace LanguageExt
         /// the value is the result of running applying the bound value to the 
         /// predicate supplied.</returns>
         [Pure]
-        public bool ForAll(Func<A, bool> pred) =>
-            isSome
-                ? pred(Value)
-                : true;
+        public bool ForAll(Func<A?, bool> pred) =>
+            !isSome || pred(Value);
 
         /// <summary>
         /// Apply a predicate to the bound value.  If the OptionUnsafe is in a None state
@@ -899,7 +900,7 @@ namespace LanguageExt
         /// is the result of running applying the bound value to the Some predicate 
         /// supplied.</returns>
         [Pure]
-        public bool BiForAll(Func<A, bool> Some, Func<Unit, bool> None) =>
+        public bool BiForAll(Func<A?, bool> Some, Func<Unit, bool> None) =>
             isSome
                 ? Some(Value)
                 : None(unit);
@@ -917,7 +918,7 @@ namespace LanguageExt
         /// is the result of running applying the bound value to the Some predicate 
         /// supplied.</returns>
         [Pure]
-        public bool BiForAll(Func<A, bool> Some, Func<bool> None) =>
+        public bool BiForAll(Func<A?, bool> Some, Func<bool> None) =>
             isSome
                 ? Some(Value)
                 : None();
@@ -934,10 +935,8 @@ namespace LanguageExt
         /// is the result of running applying the bound value to the Some predicate 
         /// supplied.</returns>
         [Pure]
-        public bool Exists(Func<A, bool> pred) =>
-            isSome
-                ? pred(Value)
-                : false;
+        public bool Exists(Func<A?, bool> pred) =>
+            isSome && pred(Value);
 
         /// <summary>
         /// Apply a predicate to the bound value.  If the OptionUnsafe is in a None state
@@ -951,7 +950,7 @@ namespace LanguageExt
         /// is the result of running applying the bound value to the Some predicate 
         /// supplied.</returns>
         [Pure]
-        public bool BiExists(Func<A, bool> Some, Func<Unit, bool> None) =>
+        public bool BiExists(Func<A?, bool> Some, Func<Unit, bool> None) =>
             isSome
                 ? Some(Value)
                 : None(unit);
@@ -968,7 +967,7 @@ namespace LanguageExt
         /// is the result of running applying the bound value to the Some predicate 
         /// supplied.</returns>
         [Pure]
-        public bool BiExists(Func<A, bool> Some, Func<bool> None) =>
+        public bool BiExists(Func<A?, bool> Some, Func<bool> None) =>
             isSome
                 ? Some(Value)
                 : None();
@@ -977,8 +976,7 @@ namespace LanguageExt
         /// Invoke an action for the bound value (if in a Some state)
         /// </summary>
         /// <param name="Some">Action to invoke</param>
-        [Pure]
-        public Unit Iter(Action<A> Some)
+        public Unit Iter(Action<A?> Some)
         {
             if (isSome)
             {
@@ -993,7 +991,7 @@ namespace LanguageExt
         /// <param name="Some">Action to invoke if in a Some state</param>
         /// <param name="None">Action to invoke if in a None state</param>
         [Pure]
-        public Unit BiIter(Action<A> Some, Action<Unit> None)
+        public Unit BiIter(Action<A?> Some, Action<Unit> None)
         {
             if (isSome)
             {
@@ -1012,7 +1010,7 @@ namespace LanguageExt
         /// <param name="Some">Action to invoke if in a Some state</param>
         /// <param name="None">Action to invoke if in a None state</param>
         [Pure]
-        public Unit BiIter(Action<A> Some, Action None)
+        public Unit BiIter(Action<A?> Some, Action None)
         {
             if (isSome)
             {
@@ -1032,7 +1030,7 @@ namespace LanguageExt
         /// <returns>Some(x) if the OptionUnsafe is in a Some state and the predicate
         /// returns True.  None otherwise.</returns>
         [Pure]
-        public OptionUnsafe<A> Filter(Func<A, bool> pred) =>
+        public OptionUnsafe<A> Filter(Func<A?, bool> pred) =>
             isSome && pred(Value)
                 ? this
                 : default;
@@ -1044,7 +1042,7 @@ namespace LanguageExt
         /// <returns>Some(x) if the OptionUnsafe is in a Some state and the predicate
         /// returns True.  None otherwise.</returns>
         [Pure]
-        public OptionUnsafe<A> Where(Func<A, bool> pred) =>
+        public OptionUnsafe<A> Where(Func<A?, bool> pred) =>
             isSome && pred(Value)
                 ? this
                 : default;
@@ -1055,25 +1053,28 @@ namespace LanguageExt
         [Pure]
         public OptionUnsafe<D> Join<B, C, D>(
             OptionUnsafe<B> inner,
-            Func<A, C> outerKeyMap,
-            Func<B, C> innerKeyMap,
-            Func<A, B, D> project) =>
-            join<EqDefault<C>, MOptionUnsafe<A>, MOptionUnsafe<B>, MOptionUnsafe<D>, OptionUnsafe<A>, OptionUnsafe<B>, OptionUnsafe<D>, A, B, C, D>(
-                this, inner, outerKeyMap, innerKeyMap, project
-                );
+            Func<A?, C?> outerKeyMap,
+            Func<B?, C?> innerKeyMap,
+            Func<A?, B?, D?> project) =>
+            from a in this
+            from b in inner
+            from r in default(EqDefault<C>).Equals(outerKeyMap(a), innerKeyMap(b))
+                          ? SomeUnsafe(project(a, b))
+                          : default
+            select r;
 
         /// <summary>
         /// Partial application map
         /// </summary>
         [Pure]
-        public OptionUnsafe<Func<B, C>> ParMap<B, C>(Func<A, B, C> func) =>
+        public OptionUnsafe<Func<B, C>> ParMap<B, C>(Func<A?, B, C> func) =>
             Map(curry(func));
 
         /// <summary>
         /// Partial application map
         /// </summary>
         [Pure]
-        public OptionUnsafe<Func<B, Func<C, D>>> ParMap<B, C, D>(Func<A, B, C, D> func) =>
+        public OptionUnsafe<Func<B, Func<C, D>>> ParMap<B, C, D>(Func<A?, B, C, D> func) =>
             Map(curry(func));
 
         /// <summary>
@@ -1082,7 +1083,7 @@ namespace LanguageExt
         /// <typeparam name="B">Type of the bound result value</typeparam>
         /// <param name="map">Mapping function to apply</param>
         /// <returns>A task</returns>
-        public async Task<OptionUnsafe<B>> MapAsync<B>(Func<A, Task<B>> map) =>
+        public async Task<OptionUnsafe<B>> MapAsync<B>(Func<A?, Task<B?>> map) =>
             isSome
                 ? OptionUnsafe<B>.Some(await map(Value).ConfigureAwait(false))
                 : OptionUnsafe<B>.None;

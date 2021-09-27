@@ -57,10 +57,10 @@ namespace LanguageExt
         where OPT : struct, OptionalUnsafe<OA, A>
     {
         readonly OA option;
-        readonly Action<A> someHandler;
-        Action noneHandler;
+        readonly Action<A?> someHandler;
+        Action? noneHandler;
 
-        internal SomeUnsafeUnitContext(OA option, Action<A> someHandler)
+        internal SomeUnsafeUnitContext(OA option, Action<A?> someHandler)
         {
             this.option = option;
             this.someHandler = someHandler;
@@ -84,7 +84,7 @@ namespace LanguageExt
 
         Unit HandleNone()
         {
-            noneHandler();
+            noneHandler?.Invoke();
             return unit;
         }
     }

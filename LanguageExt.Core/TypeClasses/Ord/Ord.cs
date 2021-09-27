@@ -20,7 +20,7 @@ namespace LanguageExt.TypeClasses
         /// if x equals y       : 0
         /// </returns>
         [Pure]
-        int Compare(A x, A y);
+        int Compare(A? x, A? y);
     }
         
     public static class OrdExt

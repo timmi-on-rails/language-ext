@@ -19,6 +19,6 @@ namespace LanguageExt.TypeClasses
         /// <param name="y">The right hand side of the equality operation</param>
         /// <returns>True if x and y are equal</returns>
         [Pure]
-        bool Equals(A x, A y);
+        bool Equals(A? x, A? y);
     }
 }

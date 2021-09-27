@@ -27,7 +27,7 @@ public static class OptionUnsafeExtensions
     /// All the `Some` elements are extracted in order.
     /// </summary>
     [Pure]
-    public static IEnumerable<A> Somes<A>(this IEnumerable<OptionUnsafe<A>> self)
+    public static IEnumerable<A?> Somes<A>(this IEnumerable<OptionUnsafe<A>> self)
     {
         foreach (var item in self)
         {
@@ -43,9 +43,9 @@ public static class OptionUnsafeExtensions
     /// All the `Some` elements are extracted in order.
     /// </summary>
     [Pure]
-    public static Seq<A> Somes<A>(this Seq<OptionUnsafe<A>> self)
+    public static Seq<A?> Somes<A>(this Seq<OptionUnsafe<A>> self)
     {
-        IEnumerable<A> ToSequence(Seq<OptionUnsafe<A>> items)
+        IEnumerable<A?> ToSequence(Seq<OptionUnsafe<A>> items)
         {
             foreach (var item in items)
             {
@@ -148,7 +148,7 @@ public static class OptionUnsafeExtensions
     [Pure]
     public static OptionUnsafe<C> Apply<A, B, C>(this OptionUnsafe<Func<A, B, C>> fabc, OptionUnsafe<A> fa, OptionUnsafe<B> fb) =>
         from x in fabc
-        from y in ApplOptionUnsafe<A, B, C>.Inst.Apply(curry(x), fa, fb)
+        from y in ApplOptionUnsafe<A, B, C>.Inst.Apply(curry(x), fa, fb) 
         select y;
 
     /// <summary>

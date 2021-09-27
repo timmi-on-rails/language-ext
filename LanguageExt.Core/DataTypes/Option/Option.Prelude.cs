@@ -605,8 +605,8 @@ namespace LanguageExt
             ) =>
             list.Match(
                 None,
-                opt     => match(opt, v => Some(v), None),
-                (x, xs) => match(x,   v => Some(v), None).ConcatFast(match(xs, Some, None)) // TODO: Flatten recursion
+                opt     => match(opt, Some, None),
+                (x, xs) => match(x,   Some, None).ConcatFast(match(xs, Some, None)) // TODO: Flatten recursion
             );
 
         /// <summary>

@@ -48,9 +48,9 @@ namespace LanguageExt
     public class SomeUnsafeContext<OPT, OA, A, B> where OPT : struct, OptionalUnsafe<OA, A>
     {
         readonly OA option;
-        readonly Func<A, B> someHandler;
+        readonly Func<A?, B?> someHandler;
 
-        internal SomeUnsafeContext(OA option, Func<A, B> someHandler)
+        internal SomeUnsafeContext(OA option, Func<A?, B?> someHandler)
         {
             this.option = option;
             this.someHandler = someHandler;
@@ -60,14 +60,14 @@ namespace LanguageExt
         /// The None branch of the matching operation
         /// </summary>
         /// <param name="noneHandler">None branch operation</param>
-        public B None(Func<B> noneHandler) =>
+        public B? None(Func<B> noneHandler) =>
             default(OPT).MatchUnsafe(option, someHandler, noneHandler);
 
         /// <summary>
         /// The None branch of the matching operation
         /// </summary>
         /// <param name="noneHandler">None branch operation</param>
-        public B None(B noneValue) =>
+        public B? None(B noneValue) =>
             default(OPT).MatchUnsafe(option, someHandler, noneValue);
     }
 }

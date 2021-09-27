@@ -19,8 +19,7 @@ namespace LanguageExt
         }
 
         R MatchUntyped<R>(Func<object, R> Some, Func<R> None);
-        R MatchUntypedUnsafe<R>(Func<object, R> Some, Func<R> None);
-
+        R MatchUntypedUnsafe<R>(Func<object?, R?> Some, Func<R> None);
         Type GetUnderlyingType();
     }
 
@@ -37,7 +36,6 @@ namespace LanguageExt
         }
 
         Task<R> MatchUntyped<R>(Func<object, R> Some, Func<R> None);
-
         Type GetUnderlyingType();
     }
 
