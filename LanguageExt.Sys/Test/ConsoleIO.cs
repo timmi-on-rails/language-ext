@@ -20,6 +20,12 @@ namespace LanguageExt.Sys.Test
         public Option<ConsoleKeyInfo> ReadKey() =>
             mem.ReadKey();
 
+        public event ConsoleCancelEventHandler CancelKeyPress
+        {
+            add => mem.CancelKeyPress += value;
+            remove => mem.CancelKeyPress -= value;
+        }
+
         public Unit Clear() =>
             mem.Clear();
 

@@ -8,6 +8,7 @@ namespace LanguageExt.Sys.Traits
     {
         Unit Clear();
         Option<ConsoleKeyInfo> ReadKey();
+        event ConsoleCancelEventHandler CancelKeyPress;
         Option<int> Read();
         Option<string> ReadLine();
         Unit WriteLine();

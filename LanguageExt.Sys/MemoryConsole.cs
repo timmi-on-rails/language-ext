@@ -37,6 +37,7 @@ namespace LanguageExt.Sys
         /// </remarks>
         public Unit WriteKey(ConsoleKeyInfo key)
         {
+
             KeyboardBuffer.Enqueue(key);
             return default;
         }
@@ -99,6 +100,8 @@ namespace LanguageExt.Sys
             KeyboardBuffer.TryDequeue(out var key)
                 ? key
                 : None;
+
+        internal event ConsoleCancelEventHandler CancelKeyPress;
 
         internal ConsoleKey CharToConsoleKey(char ch) =>
             Enum.TryParse<ConsoleKey>(ch.ToString(), out var ck) ? ck : default;

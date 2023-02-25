@@ -11,6 +11,12 @@ namespace LanguageExt.Sys.Live
         public Option<ConsoleKeyInfo> ReadKey() =>
             System.Console.ReadKey();
 
+        public event ConsoleCancelEventHandler CancelKeyPress
+        {
+            add => Console.CancelKeyPress += value;
+            remove => Console.CancelKeyPress -= value;
+        }
+
         public Unit Clear()
         {
             System.Console.Clear();
